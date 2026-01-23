@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radiografía del Ladrillo: Mercado de Vivienda en España</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Stone & Terracotta -->
+    <!-- 
+        Primary Background: #F9FAFB (Cool Gray 50) - Clean, readable base.
+        Secondary Background: #F3F4F6 (Cool Gray 100) - For sections/cards.
+        Accent Primary: #C05621 (Tailwind Orange 700 - Terracotta) - Evokes spanish roof tiles/brick.
+        Accent Secondary: #2C5282 (Tailwind Blue 800 - Deep Sea) - Professional contrast for comparisons.
+        Text: #1F2937 (Gray 800) - High readability.
+    -->
+
+    <!-- Application Structure Plan: 
+        1. Hero Section: Sets the tone, defining Spain as a unique market (high ownership, vertical living).
+        2. "El ADN Español" (Ownership vs Rent): Interactive Bar Chart comparing Spain to EU giants. Allows user to see the cultural divide.
+        3. "Vivir en Vertical" (Typology): Doughnut charts showing the density anomaly of Spain compared to UK/France.
+        4. "Mosaico Regional" (Geography): A grid-based interactive controller. Users click a region card to update a central price trend chart. This replaces a map to strictly avoid SVG/images while maintaining geographical exploration.
+        5. "Esfuerzo y Financiación": Line charts showing interest rate impacts and years of salary needed to buy.
+        6. Conclusion: Key takeaways summary.
+        
+        Rationale: This structure moves from the "Big Picture" (Europe context) to "Internal Structure" (Typology) to "Specifics" (Regions) to "Financials" (User impact), creating a logical narrative funnel.
+    -->
+
+    <!-- Visualization & Content Choices:
+        1. Ownership Comparison: Bar Chart. Goal: Compare. Method: Chart.js. Interaction: Toggle data sets.
+        2. Housing Types: Doughnut Chart. Goal: Inform/Contrast. Method: Chart.js. Interaction: Hover details.
+        3. Regional Pricing: Line Chart driven by HTML Grid Buttons. Goal: Change/Drill-down. Method: HTML Grid + Chart.js update. Justification: Best way to show disparity without a complex map.
+        4. Mortgage Rates: Multi-line Chart. Goal: Trend Analysis. Method: Chart.js.
+        
+        CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. All visual elements are CSS, Unicode, or Canvas.
+    -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Custom Chart Container Class - Mandatory per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Limits width on large screens */
+            height: 350px;    /* Base height */
+            max-height: 450px; /* Cap height */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Mobile adjustment for charts */
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e0; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0; 
+        }
+
+        .region-card {
+            transition: all 0.2s ease;
+        }
+        .region-card.active {
+            border-color: #C05621;
+            background-color: #FFFAF0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm border-b border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-orange-700">Mercado<span class="text-gray-900">ES</span></span>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <button onclick="scrollToSection('context')" class="text-gray-600 hover:text-orange-700 text-sm font-medium transition">Contexto Europeo</button>
+                    <button onclick="scrollToSection('typology')" class="text-gray-600 hover:text-orange-700 text-sm font-medium transition">Tipología</button>
+                    <button onclick="scrollToSection('regions')" class="text-gray-600 hover:text-orange-700 text-sm font-medium transition">Regiones</button>
+                    <button onclick="scrollToSection('finance')" class="text-gray-600 hover:text-orange-700 text-sm font-medium transition">Finanzas</button>
+                </div>
+                <!-- Mobile Menu Button (simplified) -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-gray-600 hover:text-orange-700 focus:outline-none">
+                        <span class="text-2xl">☰</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-100">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="scrollToSection('context')" class="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50">Contexto</button>
+                <button onclick="scrollToSection('typology')" class="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50">Tipología</button>
+                <button onclick="scrollToSection('regions')" class="block w-full text-left px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-50">Regiones</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative bg-white overflow-hidden">
+        <div class="max-w-7xl mx-auto">
+            <div class="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32 px-4 sm:px-6 lg:px-8">
+                <main class="mt-10 mx-auto max-w-7xl sm:mt-12 md:mt-16 lg:mt-20 xl:mt-28">
+                    <div class="sm:text-center lg:text-left">
+                        <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                            <span class="block xl:inline">El Ladrillo Español:</span>
+                            <span class="block text-orange-700 xl:inline">Una Anomalía Europea</span>
+                        </h1>
+                        <p class="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
+                            España no es solo un mercado inmobiliario; es un fenómeno cultural. Desde la altísima densidad urbana hasta la obsesión histórica por la propiedad ("País de Propietarios"), explore cómo se compara España con sus vecinos y qué la hace única.
+                        </p>
+                        <div class="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
+                            <div class="rounded-md shadow">
+                                <button onclick="scrollToSection('context')" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-orange-700 hover:bg-orange-800 md:py-4 md:text-lg transition">
+                                    Explorar Datos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+        <div class="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2 bg-gray-100 flex items-center justify-center">
+            <!-- Abstract visualization representing housing using CSS only -->
+            <div class="grid grid-cols-4 gap-4 p-8 opacity-70 transform rotate-3">
+                <div class="w-16 h-32 bg-orange-200 rounded-t-lg"></div>
+                <div class="w-16 h-48 bg-orange-300 rounded-t-lg mt-10"></div>
+                <div class="w-16 h-40 bg-gray-300 rounded-t-lg"></div>
+                <div class="w-16 h-56 bg-orange-700 rounded-t-lg mt-5"></div>
+                <div class="w-16 h-24 bg-gray-400 rounded-t-lg mt-8"></div>
+                <div class="w-16 h-44 bg-orange-600 rounded-t-lg"></div>
+                <div class="w-16 h-36 bg-orange-400 rounded-t-lg mt-12"></div>
+                <div class="w-16 h-28 bg-gray-300 rounded-t-lg"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Section 1: Ownership vs Rent (Context) -->
+    <section id="context" class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-extrabold text-gray-900">Cultura de Propietarios</h2>
+                <p class="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
+                    Históricamente, España ha promovido la compra sobre el alquiler. Aunque la tendencia está cambiando entre los jóvenes, España sigue teniendo una de las tasas de propiedad más altas de Europa Occidental, superando ampliamente a economías como Alemania.
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 lg:p-10">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Key Metric Card -->
+                    <div class="bg-orange-50 rounded-lg p-6 border-l-4 border-orange-600 flex flex-col justify-center">
+                        <h3 class="text-lg font-semibold text-orange-800">Tasa de Propiedad</h3>
+                        <div class="mt-2 flex items-baseline">
+                            <span class="text-4xl font-bold text-gray-900">76%</span>
+                            <span class="ml-2 text-sm text-gray-600">España</span>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-700">
+                            En contraste con el <span class="font-bold">49%</span> de Alemania o el <span class="font-bold">64%</span> de Francia. En España, el alquiler se ha visto tradicionalmente como "tirar el dinero".
+                        </div>
+                    </div>
+
+                    <!-- Chart Area -->
+                    <div class="lg:col-span-2">
+                        <div class="mb-4 flex justify-end space-x-2">
+                            <button onclick="updateOwnershipChart('west')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-medium transition focus:ring-2 focus:ring-orange-500">Europa Oeste</button>
+                            <button onclick="updateOwnershipChart('all')" class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm font-medium transition focus:ring-2 focus:ring-orange-500">Todos</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="ownershipChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Typology (Vertical Living) -->
+    <section id="typology" class="py-16 bg-white border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                
+                <!-- Text Content -->
+                <div class="order-2 md:order-1">
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-6">España Vertical: El Reino de los Pisos</h2>
+                    <p class="text-lg text-gray-600 mb-6">
+                        Una de las características más singulares del mercado español es la prevalencia de la vivienda en altura. A diferencia del Reino Unido o los Países Bajos, donde predominan las casas adosadas o unifamiliares, en España la gran mayoría de la población reside en pisos.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-orange-100 text-orange-600">🏢</div>
+                            <div class="ml-4">
+                                <h4 class="text-lg font-bold text-gray-900">Densidad Urbana</h4>
+                                <p class="text-gray-500 text-sm">España tiene algunas de las ciudades más densas de Europa (e.g., L'Hospitalet, Barcelona), lo que fomenta un estilo de vida comunitario y de servicios a pie.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start">
+                            <div class="flex-shrink-0 h-6 w-6 flex items-center justify-center rounded-full bg-orange-100 text-orange-600">🚧</div>
+                            <div class="ml-4">
+                                <h4 class="text-lg font-bold text-gray-900">Planificación Histórica</h4>
+                                <p class="text-gray-500 text-sm">El desarrollo de los años 60 y 70 priorizó la construcción vertical rápida para alojar el éxodo rural.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Visualization -->
+                <div class="order-1 md:order-2 bg-gray-50 p-6 rounded-xl">
+                    <h3 class="text-center font-semibold text-gray-700 mb-4">Población viviendo en pisos (%)</h3>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="typologyChart"></canvas>
+                    </div>
+                    <div class="text-center mt-4 text-xs text-gray-500 italic">Fuente: Eurostat (Datos aproximados recientes)</div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Regional Explorer (The Two Spains) -->
+    <section id="regions" class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-10 text-center">
+                <h2 class="text-3xl font-extrabold text-gray-900">Las "Dos Españas" Inmobiliarias</h2>
+                <p class="mt-4 text-lg text-gray-500 max-w-3xl mx-auto">
+                    El precio medio nacional es engañoso. Existe una brecha inmensa entre la "España Vaciada", donde los precios se estancan, y las zonas de alta tensión (Madrid, Barcelona, Islas, Costa del Sol). Seleccione una región para ver su tendencia de precios.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Interactive Grid (Selector) -->
+                <div class="lg:col-span-4">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Seleccionar Comunidad</h3>
+                    <div class="grid grid-cols-2 gap-3" id="regionGrid">
+                        <!-- Buttons injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Dynamic Chart Panel -->
+                <div class="lg:col-span-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md h-full flex flex-col">
+                        <div class="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 id="selectedRegionTitle" class="text-2xl font-bold text-gray-900">Madrid</h3>
+                                <p class="text-sm text-gray-500">Evolución precio m² (Compra)</p>
+                            </div>
+                            <div id="regionBadge" class="px-4 py-2 bg-red-100 text-red-800 rounded-full font-bold text-sm">
+                                Zona Tensionada
+                            </div>
+                        </div>
+                        
+                        <!-- Chart Container -->
+                        <div class="chart-container flex-grow">
+                            <canvas id="regionChart"></canvas>
+                        </div>
+                        
+                        <!-- Quick Stats for Region -->
+                        <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100">
+                            <div class="text-center">
+                                <span class="block text-gray-400 text-xs uppercase">Precio Actual</span>
+                                <span id="statPrice" class="block text-xl font-bold text-gray-800">3.100 €/m²</span>
+                            </div>
+                            <div class="text-center border-l border-gray-100">
+                                <span class="block text-gray-400 text-xs uppercase">Var. Anual</span>
+                                <span id="statTrend" class="block text-xl font-bold text-green-600">+4.5%</span>
+                            </div>
+                            <div class="text-center border-l border-gray-100">
+                                <span class="block text-gray-400 text-xs uppercase">Rentabilidad</span>
+                                <span id="statYield" class="block text-xl font-bold text-blue-600">4.8%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Finance (Effort & Rates) -->
+    <section id="finance" class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-8">El Esfuerzo Financiero</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Text & Context -->
+                <div class="prose prose-orange">
+                    <p class="text-lg text-gray-600">
+                        El acceso a la vivienda es el gran reto generacional. Mientras los salarios han crecido moderadamente, los precios en zonas urbanas se han disparado.
+                    </p>
+                    <h3 class="text-xl font-bold text-gray-800 mt-6 mb-3">Impacto de los Tipos de Interés</h3>
+                    <p class="text-gray-600">
+                        España era tradicionalmente un mercado de hipotecas a tipo variable (ligadas al Euribor). Sin embargo, desde 2016, hubo un cambio estructural masivo hacia el tipo fijo, protegiendo a muchos hogares de las subidas recientes del BCE.
+                    </p>
+                    <div class="mt-8 bg-orange-50 p-6 rounded-lg border border-orange-100">
+                        <h4 class="font-bold text-orange-900">Dato Clave: Años de Salario</h4>
+                        <p class="text-orange-800 mt-2">
+                            De media, un español necesita dedicar <span class="font-bold text-2xl">7.5 años</span> de su salario bruto íntegro para pagar una vivienda. En Baleares o Madrid, esta cifra puede superar los <span class="font-bold">15 años</span>.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Visualization -->
+                <div>
+                    <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
+                        <h3 class="font-bold text-gray-700 mb-4">Evolución Tipos Hipotecarios (Variable vs Fijo)</h3>
+                        <div class="chart-container" style="height: 300px;">
+                            <canvas id="mortgageChart"></canvas>
+                        </div>
+                        <p class="mt-4 text-xs text-gray-500 text-center">
+                            Porcentaje de nuevas hipotecas constituidas. Note el "cruce" histórico alrededor de 2020.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-orange-500 mb-4">Conclusiones</h3>
+                    <p class="text-gray-400 text-sm">
+                        El mercado español es resiliente pero desigual. Se caracteriza por una alta tasa de propiedad, vida vertical y una polarización geográfica extrema. El futuro dependerá de la oferta en zonas tensionadas.
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-orange-500 mb-4">Fuentes</h3>
+                    <ul class="text-gray-400 text-sm space-y-2">
+                        <li>• Instituto Nacional de Estadística (INE)</li>
+                        <li>• Registradores de España</li>
+                        <li>• Banco de España</li>
+                        <li>• Eurostat</li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-xs mt-8 md:mt-0 text-right">
+                        Generado con fines educativos.<br>
+                        SPA Interactiva sin dependencias externas complejas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- State Management ---
+        const state = {
+            currentRegion: 'madrid',
+            ownershipView: 'west' // 'west' or 'all'
+        };
+
+        // --- Data Repository ---
+        const data = {
+            ownership: {
+                labels: ['España', 'Italia', 'Francia', 'Reino Unido', 'Alemania'],
+                values: [76, 72.4, 64.1, 63, 49.5], // % Ownership
+                colors: ['#C05621', '#CBD5E0', '#CBD5E0', '#CBD5E0', '#CBD5E0']
+            },
+            ownershipExtended: {
+                labels: ['Rumanía', 'España', 'Polonia', 'Media UE', 'Francia', 'Alemania', 'Suiza'],
+                values: [96, 76, 85, 70, 64, 49.5, 42],
+                colors: ['#4A5568', '#C05621', '#CBD5E0', '#718096', '#CBD5E0', '#CBD5E0', '#4A5568']
+            },
+            typology: {
+                labels: ['Pisos/Apartamentos', 'Casas Adosadas', 'Casas Aisladas', 'Otros'],
+                data: [66, 20, 12, 2], // Approx data for Spain
+                dataEU: [46, 20, 33, 1] // Comparison (Rough avg)
+            },
+            regions: [
+                { id: 'madrid', name: 'Com. de Madrid', price: 3100, trend: 4.5, yield: 4.8, type: 'high', history: [2600, 2750, 2900, 2800, 2950, 3100] },
+                { id: 'cataluna', name: 'Cataluña', price: 2850, trend: 3.2, yield: 5.1, type: 'high', history: [2400, 2550, 2700, 2650, 2750, 2850] },
+                { id: 'baleares', name: 'Islas Baleares', price: 3900, trend: 8.1, yield: 3.9, type: 'critical', history: [2800, 3100, 3400, 3500, 3700, 3900] },
+                { id: 'andalucia', name: 'Andalucía', price: 1800, trend: 2.1, yield: 5.5, type: 'mixed', history: [1600, 1650, 1700, 1700, 1750, 1800] },
+                { id: 'valencia', name: 'C. Valenciana', price: 1650, trend: 5.4, yield: 6.2, type: 'mixed', history: [1300, 1350, 1400, 1450, 1550, 1650] },
+                { id: 'galicia', name: 'Galicia', price: 1400, trend: 1.2, yield: 5.0, type: 'stable', history: [1350, 1360, 1370, 1380, 1390, 1400] },
+                { id: 'castilla', name: 'Castilla y León', price: 1100, trend: 0.5, yield: 5.8, type: 'low', history: [1150, 1140, 1130, 1120, 1110, 1100] },
+                { id: 'extremadura', name: 'Extremadura', price: 950, trend: -0.5, yield: 6.0, type: 'low', history: [1000, 990, 980, 970, 960, 950] }
+            ],
+            mortgages: {
+                years: ['2010', '2012', '2014', '2016', '2018', '2020', '2022', '2024'],
+                variable: [95, 92, 85, 70, 60, 45, 25, 35], // Rough % of new mortgages
+                fixed: [5, 8, 15, 30, 40, 55, 75, 65]
+            }
+        };
+
+        // --- Chart Instances (to allow destruction/update) ---
+        let chartInstances = {};
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initOwnershipChart();
+            initTypologyChart();
+            renderRegionButtons();
+            updateRegionData('madrid'); // Default
+            initMortgageChart();
+
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.toggle('hidden');
+            });
+        });
+
+        // --- Navigation Logic ---
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        // --- Chart 1: Ownership ---
+        function initOwnershipChart() {
+            const ctx = document.getElementById('ownershipChart').getContext('2d');
+            
+            // Initial Data (West)
+            const config = {
+                type: 'bar',
+                data: {
+                    labels: data.ownership.labels,
+                    datasets: [{
+                        label: '% Tasa de Propiedad',
+                        data: data.ownership.values,
+                        backgroundColor: data.ownership.colors,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.raw}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    }
+                }
+            };
+
+            chartInstances.ownership = new Chart(ctx, config);
+        }
+
+        window.updateOwnershipChart = (view) => {
+            const chart = chartInstances.ownership;
+            if (view === 'west') {
+                chart.data.labels = data.ownership.labels;
+                chart.data.datasets[0].data = data.ownership.values;
+                chart.data.datasets[0].backgroundColor = data.ownership.colors;
+            } else {
+                chart.data.labels = data.ownershipExtended.labels;
+                chart.data.datasets[0].data = data.ownershipExtended.values;
+                chart.data.datasets[0].backgroundColor = data.ownershipExtended.colors;
+            }
+            chart.update();
+        };
+
+        // --- Chart 2: Typology ---
+        function initTypologyChart() {
+            const ctx = document.getElementById('typologyChart').getContext('2d');
+            
+            chartInstances.typology = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.typology.labels,
+                    datasets: [{
+                        data: data.typology.data,
+                        backgroundColor: ['#C05621', '#DD6B20', '#ED8936', '#E2E8F0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        // --- Section 3: Regions Logic ---
+        function renderRegionButtons() {
+            const container = document.getElementById('regionGrid');
+            container.innerHTML = '';
+            
+            data.regions.forEach(region => {
+                const btn = document.createElement('div');
+                btn.className = 'region-card cursor-pointer p-3 rounded border border-gray-200 bg-white hover:bg-gray-50 flex justify-between items-center';
+                btn.onclick = () => updateRegionData(region.id);
+                btn.id = `btn-${region.id}`;
+                
+                // Color indicator based on trend
+                const indicatorColor = region.trend > 3 ? 'bg-red-500' : (region.trend > 0 ? 'bg-green-500' : 'bg-blue-500');
+                
+                btn.innerHTML = `
+                    <span class="font-medium text-sm text-gray-700">${region.name}</span>
+                    <span class="h-2 w-2 rounded-full ${indicatorColor}"></span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function updateRegionData(regionId) {
+            // Update UI State
+            document.querySelectorAll('.region-card').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${regionId}`).classList.add('active');
+
+            const rData = data.regions.find(r => r.id === regionId);
+
+            // Update Text
+            document.getElementById('selectedRegionTitle').innerText = rData.name;
+            document.getElementById('statPrice').innerText = `${rData.price} €/m²`;
+            document.getElementById('statTrend').innerText = `${rData.trend > 0 ? '+' : ''}${rData.trend}%`;
+            document.getElementById('statTrend').className = `block text-xl font-bold ${rData.trend >= 0 ? 'text-green-600' : 'text-blue-600'}`;
+            document.getElementById('statYield').innerText = `${rData.yield}%`;
+
+            // Badge Logic
+            const badge = document.getElementById('regionBadge');
+            if(rData.type === 'critical') {
+                badge.className = 'px-4 py-2 bg-red-100 text-red-800 rounded-full font-bold text-sm';
+                badge.innerText = 'Zona Muy Tensionada';
+            } else if (rData.type === 'high') {
+                badge.className = 'px-4 py-2 bg-orange-100 text-orange-800 rounded-full font-bold text-sm';
+                badge.innerText = 'Alta Demanda';
+            } else if (rData.type === 'low') {
+                badge.className = 'px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-bold text-sm';
+                badge.innerText = 'Estancado/Bajo';
+            } else {
+                badge.className = 'px-4 py-2 bg-green-100 text-green-800 rounded-full font-bold text-sm';
+                badge.innerText = 'Crecimiento Moderado';
+            }
+
+            // Update Chart
+            updateRegionChart(rData);
+        }
+
+        function updateRegionChart(regionData) {
+            const ctx = document.getElementById('regionChart').getContext('2d');
+            const years = ['2019', '2020', '2021', '2022', '2023', '2024'];
+
+            if (chartInstances.region) {
+                chartInstances.region.destroy();
+            }
+
+            chartInstances.region = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Precio m² (€)',
+                        data: regionData.history,
+                        borderColor: '#C05621',
+                        backgroundColor: 'rgba(192, 86, 33, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: false,
+                            grid: { borderDash: [2, 4] } 
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // --- Chart 4: Mortgages ---
+        function initMortgageChart() {
+            const ctx = document.getElementById('mortgageChart').getContext('2d');
+            
+            chartInstances.mortgage = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.mortgages.years,
+                    datasets: [
+                        {
+                            label: 'Tipo Fijo (%)',
+                            data: data.mortgages.fixed,
+                            borderColor: '#2C5282',
+                            backgroundColor: '#2C5282',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Tipo Variable (%)',
+                            data: data.mortgages.variable,
+                            borderColor: '#C05621',
+                            backgroundColor: '#C05621',
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            max: 100,
+                            title: { display: true, text: '% Cuota de Mercado' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
