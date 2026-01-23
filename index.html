@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector de Falacias Lógicas: Guía Esencial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #F9F8F6; /* Warm neutral background */
+            color: #333;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        /* Chart Container Styling per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px; /* Constraint width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .active-tab {
+            background-color: #334155;
+            color: white;
+        }
+        .inactive-tab {
+            background-color: #E2E8F0;
+            color: #475569;
+        }
+        .fallacy-icon {
+            font-size: 2rem;
+            line-height: 1;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutral Background (#F9F8F6) with Slate (#334155) for structure, and semantic accents (Teal, Amber, Rose, Indigo) for categories. Minimalistic and harmonious. -->
+    <!-- Application Structure Plan: 
+         1. Hero Section: Quick definition and context.
+         2. Analytical Overview: A Chart.js visualization showing the 4 main families of fallacies to provide a mental map.
+         3. The Fallacy Explorer: The core interactive grid. Users filter by category. Cards are concise (short explanation + clear example) to solve the "too long" problem.
+         4. The Dojo (Quiz): A simplified interactive quiz to test recognition of fallacies in real sentences.
+         This structure moves from Theory -> Exploration -> Application. -->
+    <!-- Visualization & Content Choices:
+         1. Taxonomy Chart (Doughnut): Goal is to Organize. Shows the relationship/grouping of fallacies. No SVG used.
+         2. Interactive Grid: Goal is to Inform. Uses DOM manipulation to filter content.
+         3. Quiz Interface: Goal is Engagement. Simple JS logic to validate answers.
+         4. Content is synthesized from the source PDF into "Micro-learning" bites. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation / Header -->
+    <header class="bg-slate-800 text-white py-6 shadow-md">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight">🔎 Detector de Falacias</h1>
+                <p class="text-slate-400 text-sm mt-1">Guía práctica de lógica y argumentación</p>
+            </div>
+            <div class="hidden md:block text-right text-xs text-slate-400">
+                Basado en "Hoja de falacias.pdf"<br>Resumido y simplificado
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8 space-y-12">
+
+        <!-- Intro Section -->
+        <section class="max-w-4xl mx-auto text-center space-y-4">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">¿Qué es una falacia?</h2>
+                <p class="text-slate-600 leading-relaxed">
+                    Una falacia es un error de razonamiento que invalida un argumento. Aunque pueden parecer persuasivas psicológicamente, carecen de solidez lógica. Esta aplicación organiza las falacias más comunes del reporte original en cuatro categorías esenciales para facilitar su identificación rápida en debates cotidianos.
+                </p>
+            </div>
+        </section>
+
+        <!-- Visualization Section -->
+        <section class="grid md:grid-cols-12 gap-8 items-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div class="md:col-span-5 flex flex-col justify-center">
+                <h3 class="text-2xl font-bold text-slate-800 mb-4">El Mapa de los Errores</h3>
+                <p class="text-slate-600 mb-6 text-sm">
+                    Las falacias no son aleatorias; se agrupan según <em>dónde</em> falla la lógica. El gráfico muestra la distribución de las cuatro familias principales que exploraremos. Comprender estas categorías es el primer paso para detectar el engaño.
+                </p>
+                <div class="bg-slate-50 p-4 rounded-xl text-xs space-y-2 text-slate-500">
+                    <p>🔵 <strong>Relevancia:</strong> Las premisas no tienen relación con la conclusión.</p>
+                    <p>🟠 <strong>Inducción Deficiente:</strong> Las premisas son débiles o insuficientes.</p>
+                    <p>🟣 <strong>Presuposición:</strong> Se asume algo no probado en la base.</p>
+                    <p>🟢 <strong>Ambigüedad:</strong> Uso confuso del lenguaje o significados.</p>
+                </div>
+            </div>
+            <div class="md:col-span-7 flex justify-center w-full">
+                <!-- Chart Container -->
+                <div class="chart-container">
+                    <canvas id="taxonomyChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Interaction: Fallacy Explorer -->
+        <section id="explorer">
+            <div class="mb-8 text-center md:text-left">
+                <h3 class="text-2xl font-bold text-slate-800">Explorador de Falacias</h3>
+                <p class="text-slate-500 mt-2">Selecciona una categoría para ver explicaciones cortas y ejemplos precisos.</p>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap justify-center md:justify-start gap-2 mb-8" id="filterContainer">
+                <button onclick="filterFallacies('all')" class="filter-btn active-tab px-5 py-2 rounded-full font-medium transition-colors duration-200 text-sm">Todas</button>
+                <button onclick="filterFallacies('relevancia')" class="filter-btn inactive-tab px-5 py-2 rounded-full font-medium transition-colors duration-200 text-sm">Relevancia</button>
+                <button onclick="filterFallacies('induccion')" class="filter-btn inactive-tab px-5 py-2 rounded-full font-medium transition-colors duration-200 text-sm">Inducción Deficiente</button>
+                <button onclick="filterFallacies('presuposicion')" class="filter-btn inactive-tab px-5 py-2 rounded-full font-medium transition-colors duration-200 text-sm">Presuposición</button>
+                <button onclick="filterFallacies('ambiguedad')" class="filter-btn inactive-tab px-5 py-2 rounded-full font-medium transition-colors duration-200 text-sm">Ambigüedad</button>
+            </div>
+
+            <!-- Grid -->
+            <div id="fallacyGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Javascript will populate this -->
+            </div>
+        </section>
+
+        <!-- Interactive Quiz Section -->
+        <section class="bg-slate-800 text-white rounded-3xl p-8 md:p-12 relative overflow-hidden">
+            <!-- Decorative background element using CSS only -->
+            <div class="absolute top-0 right-0 w-64 h-64 bg-slate-700 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -mr-16 -mt-16"></div>
+            
+            <div class="relative z-10 max-w-3xl mx-auto text-center">
+                <h3 class="text-2xl md:text-3xl font-bold mb-4">Dojo de Argumentación</h3>
+                <p class="text-slate-300 mb-8">
+                    Pon a prueba lo aprendido. Lee el argumento y selecciona qué falacia se está cometiendo.
+                </p>
+
+                <div id="quizContainer" class="bg-white text-slate-800 rounded-xl p-6 shadow-2xl mx-auto max-w-2xl">
+                    <div id="quizQuestion" class="text-lg font-medium mb-6 min-h-[60px] flex items-center justify-center italic">
+                        "Cargando pregunta..."
+                    </div>
+                    <div id="quizOptions" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Options generated by JS -->
+                    </div>
+                    <div id="quizFeedback" class="mt-4 text-center font-bold hidden p-3 rounded-lg"></div>
+                    <button id="nextQuestionBtn" class="mt-4 px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition hidden mx-auto">Siguiente Desafío</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-8 text-center text-slate-500 text-sm">
+        <p>© 2026 Detector de Falacias. Herramienta educativa basada en análisis lógico.</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // --- Data Source ---
+        // Synthesized from "Hoja de falacias.pdf" for brevity and clarity.
+        const fallacies = [
+            // RELEVANCIA
+            {
+                id: 'adhominem',
+                name: 'Ad Hominem',
+                category: 'relevancia',
+                icon: '😡',
+                desc: 'Atacar a la persona que argumenta en lugar de refutar su argumento.',
+                example: '«Dices que fumar es malo, pero tú fumas, así que tu opinión no cuenta».'
+            },
+            {
+                id: 'adpopulum',
+                name: 'Ad Populum',
+                category: 'relevancia',
+                icon: '🐑',
+                desc: 'Apelar a las emociones de la multitud o a la mayoría para validar algo.',
+                example: '«Esta marca de teléfonos es la mejor porque todo el mundo la compra».'
+            },
+            {
+                id: 'adbaculum',
+                name: 'Ad Baculum',
+                category: 'relevancia',
+                icon: '👊',
+                desc: 'Apelación a la fuerza o amenaza (física o sutil) para imponer una conclusión.',
+                example: '«Si no votas por mi propuesta, la empresa podría verse obligada a despedir gente».'
+            },
+            {
+                id: 'admisericordiam',
+                name: 'Ad Misericordiam',
+                category: 'relevancia',
+                icon: '😭',
+                desc: 'Apelar a la lástima o piedad en lugar de dar razones lógicas.',
+                example: '«Profesor, no me repruebe, tuve una semana muy difícil y mi gato enfermó».'
+            },
+            {
+                id: 'ignorantiam',
+                name: 'Ad Ignorantiam',
+                category: 'induccion', // Often classified here or relevance depending on system, placing in Induction per common mapping
+                icon: '🛸',
+                desc: 'Afirmar que algo es verdad solo porque no se ha probado que sea falso (o viceversa).',
+                example: '«Nadie ha probado que los fantasmas no existan, por lo tanto, existen».'
+            },
+            {
+                id: 'verecundiam',
+                name: 'Ad Verecundiam',
+                category: 'induccion',
+                icon: '👑',
+                desc: 'Apelar a una autoridad inapropiada o falsa que no es experta en el tema.',
+                example: '«Esta dieta es la mejor porque la recomienda este actor famoso de Hollywood».'
+            },
+            // INDUCCIÓN DEFICIENTE
+            {
+                id: 'causafalsa',
+                name: 'Causa Falsa',
+                category: 'induccion',
+                icon: '🔗',
+                desc: 'Asumir que porque A pasó antes que B, A causó B (correlación no es causalidad).',
+                example: '«Usé mis calcetines rojos y ganamos el partido. Los calcetines nos dieron la victoria».'
+            },
+            {
+                id: 'generalizacion',
+                name: 'Generalización Precipitada',
+                category: 'induccion',
+                icon: '🏃',
+                desc: 'Sacar una conclusión general basada en muy pocos casos atípicos.',
+                example: '«Conocí a dos franceses maleducados, así que todos los franceses son groseros».'
+            },
+            // PRESUPOSICIÓN
+            {
+                id: 'petitioprincipii',
+                name: 'Petición de Principio',
+                category: 'presuposicion',
+                icon: '🔄',
+                desc: 'La conclusión ya está incluida (escondida) en las premisas. Razonamiento circular.',
+                example: '«Dios existe porque lo dice la Biblia, y la Biblia es verdad porque la dictó Dios».'
+            },
+            {
+                id: 'preguntacompleja',
+                name: 'Pregunta Compleja',
+                category: 'presuposicion',
+                icon: '❓',
+                desc: 'Hacer una pregunta que presupone la verdad de algo no probado.',
+                example: '«¿Ya dejaste de engañar a tu esposa?» (Si respondes sí o no, admites culpa).'
+            },
+            {
+                id: 'accidente',
+                name: 'Accidente',
+                category: 'presuposicion',
+                icon: '💥',
+                desc: 'Aplicar una regla general a un caso particular donde no aplica por circunstancias especiales.',
+                example: '«Cortar a alguien con un cuchillo es crimen. Los cirujanos cortan gente, así que son criminales».'
+            },
+            // AMBIGÜEDAD
+            {
+                id: 'equivoco',
+                name: 'Equívoco',
+                category: 'ambiguedad',
+                icon: '🎭',
+                desc: 'Usar una palabra con dos significados distintos en el mismo argumento.',
+                example: '«El fin de una cosa es su perfección; la muerte es el fin de la vida; por lo tanto, la muerte es la perfección de la vida».'
+            },
+            {
+                id: 'anfibologia',
+                name: 'Anfibología',
+                category: 'ambiguedad',
+                icon: '🌫️',
+                desc: 'Ambigüedad causada por una estructura gramatical confusa o mal construida.',
+                example: '«Venden ropa para niños de lana» (¿Los niños son de lana o la ropa es de lana?).'
+            },
+            {
+                id: 'composicion',
+                name: 'Composición',
+                category: 'ambiguedad',
+                icon: '🧩',
+                desc: 'Asumir que lo que es verdad para las partes es verdad para el todo.',
+                example: '«Cada pieza de esta máquina es ligera, así que la máquina entera pesa poco».'
+            },
+             {
+                id: 'division',
+                name: 'División',
+                category: 'ambiguedad',
+                icon: '🍰',
+                desc: 'Asumir que lo que es verdad para el todo es verdad para sus partes.',
+                example: '«Esta empresa es muy importante, así que este conserje de la empresa es muy importante».'
+            }
+        ];
+
+        // --- Chart Generation ---
+        function renderChart() {
+            const ctx = document.getElementById('taxonomyChart').getContext('2d');
+            
+            // Count categories
+            const counts = {
+                relevancia: fallacies.filter(f => f.category === 'relevancia').length,
+                induccion: fallacies.filter(f => f.category === 'induccion').length,
+                presuposicion: fallacies.filter(f => f.category === 'presuposicion').length,
+                ambiguedad: fallacies.filter(f => f.category === 'ambiguedad').length
+            };
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Relevancia', 'Inducción Deficiente', 'Presuposición', 'Ambigüedad'],
+                    datasets: [{
+                        data: [counts.relevancia, counts.induccion, counts.presuposicion, counts.ambiguedad],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)', // Blue (Relevancia)
+                            'rgba(249, 115, 22, 0.8)', // Orange (Induccion)
+                            'rgba(168, 85, 247, 0.8)', // Purple (Presuposicion)
+                            'rgba(34, 197, 94, 0.8)'   // Green (Ambiguedad)
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: "'Outfit', sans-serif", size: 12 },
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                            padding: 12,
+                            bodyFont: { family: "'Outfit', sans-serif" }
+                        }
+                    },
+                    layout: {
+                        padding: 10
+                    }
+                }
+            });
+        }
+
+        // --- Grid Logic ---
+        const grid = document.getElementById('fallacyGrid');
+
+        function getCategoryColor(cat) {
+            switch(cat) {
+                case 'relevancia': return 'bg-blue-50 text-blue-700 border-blue-100';
+                case 'induccion': return 'bg-orange-50 text-orange-700 border-orange-100';
+                case 'presuposicion': return 'bg-purple-50 text-purple-700 border-purple-100';
+                case 'ambiguedad': return 'bg-green-50 text-green-700 border-green-100';
+                default: return 'bg-gray-50';
+            }
+        }
+
+        function filterFallacies(category) {
+            // Update Buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if(category === 'all' && btn.innerText === 'Todas') {
+                    btn.classList.add('active-tab');
+                    btn.classList.remove('inactive-tab');
+                } else if (btn.getAttribute('onclick').includes(category) && category !== 'all') {
+                    btn.classList.add('active-tab');
+                    btn.classList.remove('inactive-tab');
+                } else {
+                    btn.classList.remove('active-tab');
+                    btn.classList.add('inactive-tab');
+                }
+            });
+
+            // Filter Data
+            const filtered = category === 'all' 
+                ? fallacies 
+                : fallacies.filter(f => f.category === category);
+            
+            // Render
+            grid.innerHTML = '';
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = `glass-panel rounded-xl p-6 card-hover border-t-4 transition-all duration-300`;
+                
+                // Color coding border
+                let borderColor = 'border-slate-300';
+                if(item.category === 'relevancia') borderColor = 'border-blue-500';
+                if(item.category === 'induccion') borderColor = 'border-orange-500';
+                if(item.category === 'presuposicion') borderColor = 'border-purple-500';
+                if(item.category === 'ambiguedad') borderColor = 'border-green-500';
+                
+                card.classList.add(borderColor);
+
+                const badgeClass = getCategoryColor(item.category);
+                const displayCat = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded ${badgeClass}">${displayCat}</span>
+                        <span class="fallacy-icon" role="img" aria-label="icono">${item.icon}</span>
+                    </div>
+                    <h4 class="text-xl font-bold text-slate-800 mb-2">${item.name}</h4>
+                    <p class="text-slate-600 text-sm mb-4 leading-snug h-12">${item.desc}</p>
+                    <div class="bg-slate-100 p-3 rounded-lg border-l-4 border-slate-400">
+                        <p class="text-xs text-slate-500 font-semibold mb-1 uppercase">Ejemplo:</p>
+                        <p class="text-sm text-slate-700 italic">"${item.example}"</p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- Quiz Logic ---
+        const quizQuestions = [
+            {
+                q: "Mi vecino dijo que va a llover, pero él nunca terminó la secundaria, así que seguro hace sol.",
+                a: "Ad Hominem",
+                options: ["Ad Hominem", "Causa Falsa", "Ad Populum"]
+            },
+            {
+                q: "Desde que compramos este amuleto, no hemos tenido accidentes. El amuleto funciona.",
+                a: "Causa Falsa",
+                options: ["Ad Baculum", "Causa Falsa", "Equívoco"]
+            },
+            {
+                q: "¿Por qué eres tan perezoso?",
+                a: "Pregunta Compleja",
+                options: ["Ad Misericordiam", "Pregunta Compleja", "Generalización Precipitada"]
+            },
+            {
+                q: "No puedes multarme, oficial. Si me multa, perderé mi empleo y mis hijos no comerán.",
+                a: "Ad Misericordiam",
+                options: ["Ad Hominem", "Ad Populum", "Ad Misericordiam"]
+            }
+        ];
+
+        let currentQIndex = 0;
+
+        function loadQuiz() {
+            const qData = quizQuestions[currentQIndex];
+            const qEl = document.getElementById('quizQuestion');
+            const opsEl = document.getElementById('quizOptions');
+            const feedback = document.getElementById('quizFeedback');
+            const nextBtn = document.getElementById('nextQuestionBtn');
+
+            qEl.innerText = `"${qData.q}"`;
+            opsEl.innerHTML = '';
+            feedback.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+
+            qData.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-medium transition";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(opt, qData.a, btn);
+                opsEl.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, correct, btnElement) {
+            const feedback = document.getElementById('quizFeedback');
+            const nextBtn = document.getElementById('nextQuestionBtn');
+            const allBtns = document.getElementById('quizOptions').querySelectorAll('button');
+
+            // Disable all buttons
+            allBtns.forEach(b => b.disabled = true);
+
+            if(selected === correct) {
+                btnElement.classList.remove('bg-slate-100');
+                btnElement.classList.add('bg-green-500', 'text-white');
+                feedback.innerText = "¡Correcto! Has identificado la falla lógica.";
+                feedback.className = "mt-4 text-center font-bold p-3 rounded-lg bg-green-100 text-green-800 block";
+            } else {
+                btnElement.classList.remove('bg-slate-100');
+                btnElement.classList.add('bg-red-500', 'text-white');
+                feedback.innerText = `Incorrecto. La respuesta era: ${correct}`;
+                feedback.className = "mt-4 text-center font-bold p-3 rounded-lg bg-red-100 text-red-800 block";
+            }
+            nextBtn.classList.remove('hidden');
+        }
+
+        document.getElementById('nextQuestionBtn').addEventListener('click', () => {
+            currentQIndex = (currentQIndex + 1) % quizQuestions.length;
+            loadQuiz();
+        });
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            renderChart();
+            filterFallacies('all');
+            loadQuiz();
+        });
+
+    </script>
+</body>
+</html>
