@@ -50,19 +50,6 @@
             line-height: 1;
         }
     </style>
-    <!-- Chosen Palette: Warm Neutral Background (#F9F8F6) with Slate (#334155) for structure, and semantic accents (Teal, Amber, Rose, Indigo) for categories. Minimalistic and harmonious. -->
-    <!-- Application Structure Plan: 
-         1. Hero Section: Quick definition and context.
-         2. Analytical Overview: A Chart.js visualization showing the 4 main families of fallacies to provide a mental map.
-         3. The Fallacy Explorer: The core interactive grid. Users filter by category. Cards are concise (short explanation + clear example) to solve the "too long" problem.
-         4. The Dojo (Quiz): A simplified interactive quiz to test recognition of fallacies in real sentences.
-         This structure moves from Theory -> Exploration -> Application. -->
-    <!-- Visualization & Content Choices:
-         1. Taxonomy Chart (Doughnut): Goal is to Organize. Shows the relationship/grouping of fallacies. No SVG used.
-         2. Interactive Grid: Goal is to Inform. Uses DOM manipulation to filter content.
-         3. Quiz Interface: Goal is Engagement. Simple JS logic to validate answers.
-         4. Content is synthesized from the source PDF into "Micro-learning" bites. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
 <body class="antialiased min-h-screen flex flex-col">
 
@@ -83,11 +70,19 @@
 
         <!-- Intro Section -->
         <section class="max-w-4xl mx-auto text-center space-y-4">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
                 <h2 class="text-xl font-bold text-slate-800 mb-2">¿Qué es una falacia?</h2>
-                <p class="text-slate-600 leading-relaxed">
+                <p class="text-slate-600 leading-relaxed mb-8">
                     Una falacia es un error de razonamiento que invalida un argumento. Aunque pueden parecer persuasivas psicológicamente, carecen de solidez lógica. Esta aplicación organiza las falacias más comunes del reporte original en cuatro categorías esenciales para facilitar su identificación rápida en debates cotidianos.
                 </p>
+                
+                <!-- Botón de descarga de PDF añadido -->
+                <a href="Falacias.pdf" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium py-3 px-6 rounded-full transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Descargar "Falacias.pdf"
+                </a>
             </div>
         </section>
 
